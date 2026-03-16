@@ -29,10 +29,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 // ── Crop ──────────────────────────────────────────────────────────────────────
 
 async function cropImage(dataUrl, rect, format, quality) {
+  if (!rect || rect.width <= 0 || rect.height <= 0) {
+    throw new Error(`Invalid crop rect: ${JSON.stringify(rect)}`);
+  }
   const bitmap = await loadBitmap(dataUrl);
-  const canvas = new OffscreenCanvas(rect.width, rect.height);
+  // Clamp rect to bitmap bounds to avoid drawImage errors
+  const x = Math.max(0, Math.min(rect.x, bitmap.width  - 1));
+  const y = Math.max(0, Math.min(rect.y, bitmap.height - 1));
+  const w = Math.min(rect.width,  bitmap.width  - x);
+  const h = Math.min(rect.height, bitmap.height - y);
+  const canvas = new OffscreenCanvas(w, h);
   const ctx    = canvas.getContext('2d');
-  ctx.drawImage(bitmap, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
+  ctx.drawImage(bitmap, x, y, w, h, 0, 0, w, h);
   bitmap.close();
   return canvasToDataUrl(canvas, format, quality);
 }
@@ -40,6 +48,9 @@ async function cropImage(dataUrl, rect, format, quality) {
 // ── Composite (full-page frames) ──────────────────────────────────────────────
 
 async function compositeFrames(frames, dimensions, format, quality) {
+  if (!frames || frames.length === 0) {
+    throw new Error('compositeFrames: no frames provided.');
+  }
   const canvas = new OffscreenCanvas(dimensions.width, dimensions.height);
   const ctx    = canvas.getContext('2d');
 
@@ -65,6 +76,9 @@ async function convertFormat(dataUrl, format, quality) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function loadBitmap(dataUrl) {
+  if (!dataUrl || !dataUrl.startsWith('data:')) {
+    throw new Error('loadBitmap: expected a data: URI.');
+  }
   const res  = await fetch(dataUrl);
   const blob = await res.blob();
   return createImageBitmap(blob);

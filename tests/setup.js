@@ -110,6 +110,12 @@ const chromeWindows = {
   create: vi.fn(async () => ({ id: 1 })),
 };
 
+// ── chrome.commands ───────────────────────────────────────────────────────────
+
+const chromeCommands = {
+  onCommand: { addListener: vi.fn() },
+};
+
 // ── Assemble global chrome object ─────────────────────────────────────────────
 
 global.chrome = {
@@ -125,7 +131,25 @@ global.chrome = {
   permissions: chromePermissions,
   runtime:     chromeRuntime,
   windows:     chromeWindows,
+  commands:    chromeCommands,
 };
+
+// ── Browser APIs not available in Node ───────────────────────────────────────
+// cropInWorker in service-worker.js uses these APIs. We provide lightweight
+// mocks so the function runs end-to-end in the Node test environment.
+
+global.createImageBitmap = vi.fn(async () => ({ width: 800, height: 600, close: vi.fn() }));
+
+function _makeMockCanvas() {
+  return {
+    getContext:    vi.fn(() => ({ drawImage: vi.fn() })),
+    convertToBlob: vi.fn(async () => new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' })),
+  };
+}
+global.OffscreenCanvas = vi.fn(_makeMockCanvas);
+
+// data: URL fetch used in cropInWorker — native Node fetch does not support data: URIs
+global.fetch = vi.fn(async () => ({ blob: async () => new Blob(['x'], { type: 'image/png' }) }));
 
 // ── Helpers exported for tests ────────────────────────────────────────────────
 
@@ -200,4 +224,9 @@ beforeEach(() => {
   chrome.debugger.attach.mockResolvedValue(undefined);
   chrome.debugger.detach.mockResolvedValue(undefined);
   chrome.debugger.sendCommand.mockResolvedValue(undefined);
+
+  // Re-wire browser API mocks (cleared by vi.clearAllMocks)
+  global.createImageBitmap.mockImplementation(async () => ({ width: 800, height: 600, close: vi.fn() }));
+  global.OffscreenCanvas.mockImplementation(_makeMockCanvas);
+  global.fetch.mockImplementation(async () => ({ blob: async () => new Blob(['x'], { type: 'image/png' }) }));
 });

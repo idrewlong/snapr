@@ -15,45 +15,65 @@
 
 import * as MSG from '../lib/messages.js';
 
+/**
+ * @param {number} tabId
+ * @param {Object} options
+ * @param {string} options.format
+ * @param {number} options.quality
+ * @param {number} [options.maxFullPageHeight]
+ * @returns {Promise<{ dataUrl: string, capped: boolean }>}
+ */
 export async function capture(tabId, options) {
-  // Inject content script
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files:  ['content/full-page.js'],
-  });
+  // Inject content script — may fail on CSP-restricted pages
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files:  ['src/content/full-page.js'],
+    });
+  } catch (err) {
+    const msg = err.message || '';
+    if (msg.includes('Cannot access') || msg.includes('chrome://') || msg.includes('refused')) {
+      throw new Error('CONTENT_SCRIPT_BLOCKED');
+    }
+    throw err;
+  }
 
   // Get page dimensions and prepare fixed elements
   const { scrollHeight, viewportHeight, viewportWidth } =
     await chrome.tabs.sendMessage(tabId, { type: MSG.SCROLL_INFO });
 
-  const maxHeight = options.maxFullPageHeight || 15000;
+  const maxHeight   = options.maxFullPageHeight || 15000;
+  const capped      = scrollHeight > maxHeight;
   const totalHeight = Math.min(scrollHeight, maxHeight);
 
   const frames = [];
-  let offsetY = 0;
+  let offsetY  = 0;
 
-  while (offsetY < totalHeight) {
-    await chrome.tabs.sendMessage(tabId, { type: MSG.SCROLL_TO, y: offsetY });
-    await delay(200); // wait for paint + lazy loads
+  try {
+    while (offsetY < totalHeight) {
+      await chrome.tabs.sendMessage(tabId, { type: MSG.SCROLL_TO, y: offsetY });
+      await delay(200); // wait for paint + lazy loads
 
-    const dataUrl = await chrome.tabs.captureVisibleTab(null, {
-      format:  'jpeg',
-      quality: 92,
-    });
+      const dataUrl = await chrome.tabs.captureVisibleTab(null, {
+        format:  'jpeg',
+        quality: 92,
+      });
 
-    const remaining = totalHeight - offsetY;
-    frames.push({ dataUrl, offsetY, height: Math.min(viewportHeight, remaining) });
-    offsetY += viewportHeight;
+      const remaining = totalHeight - offsetY;
+      frames.push({ dataUrl, offsetY, height: Math.min(viewportHeight, remaining) });
+      offsetY += viewportHeight;
+    }
+  } finally {
+    // Always restore fixed/sticky elements, even if capture throws mid-loop
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func:   () => window.__snaprRestoreFixed?.(),
+    }).catch(() => { /* tab may have closed */ });
   }
 
-  // Restore fixed/sticky elements
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    func:   () => window.__snaprRestoreFixed?.(),
-  });
-
   // Composite frames in offscreen document
-  return compositeFrames(frames, { width: viewportWidth, height: totalHeight }, options);
+  const dataUrl = await compositeFrames(frames, { width: viewportWidth, height: totalHeight }, options);
+  return { dataUrl, capped };
 }
 
 async function compositeFrames(frames, dimensions, options) {
@@ -69,12 +89,16 @@ async function compositeFrames(frames, dimensions, options) {
 }
 
 async function ensureOffscreen() {
-  if (!await chrome.offscreen.hasDocument()) {
+  if (await chrome.offscreen.hasDocument()) return;
+  try {
     await chrome.offscreen.createDocument({
-      url:         '../offscreen/offscreen.html',
-      reasons:     ['CANVAS'],
+      url:           'src/offscreen/offscreen.html',
+      reasons:       ['CANVAS'],
       justification: 'Full-page frame compositing',
     });
+  } catch (err) {
+    const stillMissing = !(await chrome.offscreen.hasDocument());
+    if (stillMissing) throw new Error(`Failed to create offscreen document: ${err.message}`);
   }
 }
 

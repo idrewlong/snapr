@@ -838,12 +838,12 @@ For tracking progress during development:
 
 **M6 — Polish and ship**
 
-- [ ] Keyboard shortcut (quick capture)
-- [ ] Error handling for all edge cases
-- [ ] Build out Testing Suite to make sure everything works
+- [x] Keyboard shortcut (quick capture)
+- [x] Error handling for all edge cases
+- [x] Build out Testing Suite to make sure everything works
 - [ ] Icon design (all sizes)
 - [ ] Web Store listing copy and screenshots
-- [ ] README and GitHub repo polish
+- [x] README and GitHub repo polish
 - [ ] CI pipeline
 - [ ] Chrome Web Store submission
 

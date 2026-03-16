@@ -11,13 +11,14 @@ A Chrome extension that captures polished website screenshots for portfolios, do
 ```bash
 git clone https://github.com/idrewlong/snapr.git
 cd snapr
+npm install
 ```
 
-No build step required for the popup UI. Load the extension directly:
+Load the extension directly (no build step required):
 
 1. Open Chrome → `chrome://extensions`
 2. Enable **Developer mode** (top-right toggle)
-3. Click **Load unpacked** → select this repo's root folder
+3. Click **Load unpacked** → select this repo's `src/` folder
 4. Pin Snapr to your toolbar and click the icon
 
 After any file change, click the **↺ refresh** icon on the extension card to reload.
@@ -31,46 +32,70 @@ snapr/
 ├── manifest.json                   ← Extension manifest (MV3)
 ├── popup-preview.html              ← Browser preview (no extension install needed)
 │
-└── src/
-    ├── popup/
-    │   ├── popup.html              ← Extension popup UI
-    │   ├── popup.css               ← All styles (10 labeled sections)
-    │   └── popup.js                ← Popup controller; Chrome API shimmed for preview
-    │
-    ├── background/
-    │   ├── service-worker.js       ← Message router + capture orchestrator
-    │   ├── capture-viewport.js     ← captureVisibleTab wrapper
-    │   ├── capture-fullpage.js     ← Scroll-stitch coordination
-    │   ├── capture-element.js      ← Element picker coordination
-    │   ├── downloader.js           ← chrome.downloads wrapper
-    │   └── viewport-emulation.js  ← Debugger API viewport override
-    │
-    ├── content/                    ← Injected on demand, never on page load
-    │   ├── full-page.js            ← Scroll measurement + fixed element handling
-    │   └── element-picker.js       ← Hover overlay + element selection (Shadow DOM)
-    │
-    ├── offscreen/
-    │   ├── offscreen.html
-    │   └── offscreen.js            ← Canvas: composite frames, crop, convert format
-    │
-    ├── options/
-    │   ├── options.html/css/js     ← Settings page (M5)
-    │
-    ├── lib/
-    │   ├── constants.js            ← Size presets, format configs, defaults
-    │   ├── messages.js             ← All message type constants (single source of truth)
-    │   ├── storage.js              ← chrome.storage typed wrapper
-    │   └── filename.js             ← Token → slug → filename generation
-    │
-    └── icons/                      ← icon-16/32/48/128.png
+├── src/
+│   ├── popup/
+│   │   ├── popup.html              ← Extension popup UI
+│   │   ├── popup.css               ← All styles (10 labeled sections)
+│   │   └── popup.js                ← Popup controller; Chrome API shimmed for preview
+│   │
+│   ├── background/
+│   │   ├── service-worker.js       ← Message router + capture orchestrator
+│   │   ├── capture-viewport.js     ← captureVisibleTab wrapper
+│   │   ├── capture-fullpage.js     ← Scroll-stitch coordination
+│   │   ├── capture-element.js      ← Element picker coordination
+│   │   ├── downloader.js           ← chrome.downloads wrapper
+│   │   └── viewport-emulation.js  ← Debugger API viewport override
+│   │
+│   ├── content/                    ← Injected on demand, never on page load
+│   │   ├── full-page.js            ← Scroll measurement + fixed element handling
+│   │   └── element-picker.js       ← Hover overlay + element selection (Shadow DOM)
+│   │
+│   ├── offscreen/
+│   │   ├── offscreen.html
+│   │   └── offscreen.js            ← Canvas: composite frames, crop, convert format
+│   │
+│   ├── options/
+│   │   ├── options.html/css/js     ← Settings page
+│   │
+│   └── lib/
+│       ├── constants.js            ← Size presets, format configs, defaults
+│       ├── messages.js             ← All message type constants (single source of truth)
+│       ├── storage.js              ← chrome.storage typed wrapper
+│       └── filename.js             ← Token → slug → filename generation
+│
+└── tests/
+    ├── setup.js                    ← Vitest global setup + Chrome API mocks
+    ├── constants.test.js
+    ├── filename.test.js
+    ├── storage.test.js
+    ├── messages.test.js
+    ├── downloader.test.js
+    ├── element-picker.test.js
+    ├── offscreen.test.js
+    ├── capture-element.test.js
+    ├── capture-fullpage.test.js
+    ├── capture-viewport.test.js
+    ├── viewport-emulation.test.js
+    ├── service-worker-element.test.js
+    └── service-worker-quick-capture.test.js
 ```
+
+---
+
+## Testing
+
+```bash
+npm test          # Run all unit tests (Vitest)
+npm run coverage  # Run tests with coverage report
+```
+
+Tests cover: filename generation, storage wrapper, message constants, downloader, offscreen compositing, all three capture modes, viewport emulation, and service worker routing.
 
 ---
 
 ## Testing the popup UI (no extension install)
 
 ```bash
-cd snapr
 python3 -m http.server 3000
 ```
 
@@ -102,17 +127,6 @@ Open `http://localhost:3000/popup-preview.html` in Chrome.
 
 ---
 
-## Implementation milestones
-
-- **M1** — Viewport capture, popup UI, format/quality, filename, settings persistence
-- **M2** — Viewport size presets (debugger API)
-- **M3** — Full-page scroll-and-stitch
-- **M4** — Element picker
-- **M5** — Capture history + options page
-- **M6** — Keyboard shortcut, error handling, icons, Web Store submission
-
----
-
 ## Permissions
 
 | Permission | Required | Why |
@@ -133,6 +147,7 @@ Snapr makes no network requests. All data stays in the browser.
 ```bash
 # Clone and load unpacked (see Install above)
 # Make changes
+# npm test to verify
 # Refresh extension at chrome://extensions
 # Open an issue or PR at github.com/idrewlong/snapr
 ```

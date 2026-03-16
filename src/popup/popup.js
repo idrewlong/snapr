@@ -94,8 +94,52 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     loadThumbnail();
     loadHistory();
+    if (isExtension) {
+    checkForRestrictedPage();
+    checkPageLoadingState();
+  }
   }
 });
+
+async function checkForRestrictedPage() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) return;
+    const url = tab.url || '';
+    const restricted =
+      url.startsWith('chrome://') ||
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('edge://') ||
+      url.startsWith('about:') ||
+      url.includes('chrome.google.com/webstore');
+    if (restricted) {
+      const btn = document.getElementById('captureBtn');
+      btn.disabled = true;
+      btn.dataset.tooltip = "Screenshots aren't available on browser internal pages.";
+      document.querySelectorAll('.mode-btn').forEach(b => b.disabled = true);
+    }
+  } catch { /* silently ignore — tab info unavailable */ }
+}
+
+async function checkPageLoadingState() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab || tab.status !== 'loading') return;
+
+    const btn  = document.getElementById('captureBtn');
+    const text = document.getElementById('btnText');
+    btn.disabled     = true;
+    text.textContent = 'Loading…';
+
+    const listener = (tabId, changeInfo) => {
+      if (tabId !== tab.id || changeInfo.status !== 'complete') return;
+      chrome.tabs.onUpdated.removeListener(listener);
+      btn.disabled     = false;
+      text.textContent = 'Capture';
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+  } catch { /* silently ignore — tab info unavailable */ }
+}
 
 // ── Event listeners (no inline onclick allowed in MV3) ────────────────────────
 
@@ -274,6 +318,17 @@ async function setMode(mode, persist = true) {
     if (isExtension) {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+        // Pre-capture the viewport NOW while we have user-gesture / activeTab context.
+        // The service worker receives ELEMENT_SELECTED in a message handler, which
+        // does NOT carry the user gesture needed for captureVisibleTab in MV3.
+        try {
+          const screenshotDataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+          await chrome.storage.local.set({ pendingScreenshot: screenshotDataUrl });
+        } catch {
+          // Non-fatal — service worker will attempt its own capture as fallback.
+        }
+
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           files:  ['src/content/element-picker.js'],
@@ -416,6 +471,7 @@ async function doCapture() {
         : state.mode === 'fullpage'
           ? await captureFullPage()
           : await captureVisibleTab();
+      _lastCaptureDataUrl = dataUrl;
       const blobUrl  = dataUrlToBlobUrl(dataUrl);
 
       await chrome.downloads.download({ url: blobUrl, filename, saveAs: true });
@@ -436,7 +492,20 @@ async function doCapture() {
     btn.classList.add('error');
     icon.innerHTML = svgX();
     text.textContent = 'Failed';
-    showToast(err.message || 'Capture failed.', 'error');
+
+    const msg = err.message || '';
+    if (msg === 'CONTENT_SCRIPT_BLOCKED') {
+      showToast('This page blocks content scripts. Viewport capture still works.', 'error');
+      // Disable modes that require content script injection
+      document.querySelectorAll('.mode-btn[data-mode="fullpage"], .mode-btn[data-mode="element"]')
+        .forEach(b => b.disabled = true);
+      if (state.mode !== 'viewport') setMode('viewport');
+    } else if (msg.includes('DOWNLOADS_') || msg.includes('disk') || msg.includes('permission')) {
+      showToast(`Download failed: ${msg}. Copying image to clipboard instead.`, 'error');
+      copyLastCaptureToClipboard();
+    } else {
+      showToast(msg || 'Capture failed.', 'error');
+    }
   }
 
   setTimeout(() => resetCaptureBtn(btn, icon, text), 1800);
@@ -502,7 +571,7 @@ async function captureFullPage() {
   });
 
   const totalHeight = Math.min(dims.scrollHeight, MAX_HEIGHT);
-  if (totalHeight > MAX_HEIGHT) showToast(`Page capped at ${MAX_HEIGHT}px`, 'warning');
+  if (dims.scrollHeight > MAX_HEIGHT) showToast(`Page was taller than ${MAX_HEIGHT}px — screenshot capped. Adjust in Settings.`, 'warning');
 
   // 2. Hide fixed/sticky elements (visibility:hidden has zero layout impact —
   //    position:relative would insert them into the flow and ghost them mid-page)
@@ -791,6 +860,20 @@ function showToast(msg, type = 'info') {
 
   container.appendChild(toast);
   setTimeout(() => dismissToast(id), 5000);
+}
+
+let _lastCaptureDataUrl = null;
+
+async function copyLastCaptureToClipboard() {
+  if (!_lastCaptureDataUrl) return;
+  try {
+    const res  = await fetch(_lastCaptureDataUrl);
+    const blob = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+    showToast('Image copied to clipboard.', 'success');
+  } catch {
+    showToast('Could not copy image to clipboard.', 'error');
+  }
 }
 
 function dismissToast(id) {

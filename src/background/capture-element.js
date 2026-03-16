@@ -13,14 +13,22 @@
 import * as MSG from '../lib/messages.js';
 
 export async function startPicker(tabId) {
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files:  ['content/element-picker.js'],
-  });
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files:  ['src/content/element-picker.js'],
+    });
+  } catch (err) {
+    const msg = err.message || '';
+    if (msg.includes('Cannot access') || msg.includes('chrome://') || msg.includes('refused')) {
+      throw new Error('CONTENT_SCRIPT_BLOCKED');
+    }
+    throw err;
+  }
   // ELEMENT_SELECTED message will arrive asynchronously when user clicks
 }
 
-export async function captureSelected(tab, rect, devicePixelRatio, options) {
+export async function captureSelected(_tab, rect, devicePixelRatio, options) {
   // Grab the visible viewport
   const dataUrl = await chrome.tabs.captureVisibleTab(null, {
     format:  options.format === 'PNG' ? 'png' : 'jpeg',
