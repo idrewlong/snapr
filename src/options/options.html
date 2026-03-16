@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snapr — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+
+  <div class="page">
+
+    <header class="page-header">
+      <div class="wordmark">snap<em>r</em></div>
+      <span class="page-subtitle">Settings</span>
+    </header>
+
+    <main class="sections">
+
+      <!-- ── 1. Defaults ── -->
+      <section class="section" id="sec-defaults">
+        <div class="section-header">
+          <h2 class="section-title">Defaults</h2>
+          <p class="section-desc">Pre-filled values when the popup opens.</p>
+        </div>
+        <div class="section-body">
+
+          <div class="field-row">
+            <span class="field-label">Mode</span>
+            <div class="seg-control" id="modeControl">
+              <button class="seg-btn" data-value="viewport">Viewport</button>
+              <button class="seg-btn" data-value="fullpage">Full Page</button>
+              <button class="seg-btn" data-value="element">Element</button>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Format</span>
+            <div class="seg-control" id="formatControl">
+              <button class="seg-btn" data-value="PNG">PNG</button>
+              <button class="seg-btn" data-value="JPG">JPG</button>
+              <button class="seg-btn" data-value="WebP">WebP</button>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" for="qualityInput">Quality</label>
+            <input type="number" class="text-input w-64" id="qualityInput" min="1" max="100">
+            <span class="field-hint">1–100, JPG / WebP only</span>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Size</span>
+            <div class="seg-control wrap" id="sizeControl">
+              <button class="seg-btn" data-value="As-is">As-is</button>
+              <button class="seg-btn" data-value="Desktop HD">Desktop HD</button>
+              <button class="seg-btn" data-value="Desktop">Desktop</button>
+              <button class="seg-btn" data-value="Laptop">Laptop</button>
+              <button class="seg-btn" data-value="Tablet">Tablet</button>
+              <button class="seg-btn" data-value="Mobile">Mobile</button>
+              <button class="seg-btn" data-value="Custom">Custom…</button>
+            </div>
+          </div>
+
+          <div class="field-row hidden" id="customSizeRow">
+            <span class="field-label">Custom</span>
+            <div class="inline-inputs">
+              <input type="number" class="text-input w-72" id="customW" min="100" max="7680" placeholder="1440">
+              <span class="sep">×</span>
+              <input type="number" class="text-input w-72" id="customH" min="100" max="7680" placeholder="900">
+              <span class="field-hint">px</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── 2. Filename ── -->
+      <section class="section" id="sec-filename">
+        <div class="section-header">
+          <h2 class="section-title">Filename</h2>
+          <p class="section-desc">Pattern used when generating the screenshot filename.</p>
+        </div>
+        <div class="section-body">
+
+          <div class="field-col">
+            <label class="field-label" for="patternInput">Pattern</label>
+            <input type="text" class="text-input full" id="patternInput" placeholder="{domain}-{path}" spellcheck="false">
+          </div>
+
+          <div class="field-col">
+            <span class="field-label">Preview</span>
+            <div class="filename-preview" id="filenamePreview"></div>
+          </div>
+
+          <details class="token-ref">
+            <summary class="token-ref-summary">Token reference</summary>
+            <table class="token-table">
+              <thead>
+                <tr><th>Token</th><th>Example</th><th>Source</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>{domain}</code></td><td>shop-example-com</td><td>URL hostname</td></tr>
+                <tr><td><code>{path}</code></td><td>products-sale</td><td>URL pathname</td></tr>
+                <tr><td><code>{title}</code></td><td>sale-example-shop</td><td>Page &lt;title&gt;</td></tr>
+                <tr><td><code>{date}</code></td><td>2026-03-15</td><td>Capture time</td></tr>
+                <tr><td><code>{time}</code></td><td>14-30-45</td><td>Capture time</td></tr>
+                <tr><td><code>{timestamp}</code></td><td>1773696645</td><td>Unix epoch</td></tr>
+                <tr><td><code>{width}</code></td><td>1440</td><td>CSS px</td></tr>
+                <tr><td><code>{height}</code></td><td>900</td><td>CSS px</td></tr>
+                <tr><td><code>{mode}</code></td><td>viewport</td><td>Capture mode</td></tr>
+              </tbody>
+            </table>
+          </details>
+
+        </div>
+      </section>
+
+      <!-- ── 3. Saving ── -->
+      <section class="section" id="sec-saving">
+        <div class="section-header">
+          <h2 class="section-title">Saving</h2>
+          <p class="section-desc">How captured files are saved to disk.</p>
+        </div>
+        <div class="section-body">
+          <div class="radio-group" id="saveLocationGroup">
+            <label class="radio-label">
+              <input type="radio" name="saveLocation" value="prompt">
+              <div class="radio-text">
+                <span class="radio-title">Always ask where to save</span>
+                <span class="radio-hint">Opens a Save As dialog for each capture.</span>
+              </div>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="saveLocation" value="default">
+              <div class="radio-text">
+                <span class="radio-title">Save to default download folder</span>
+                <span class="radio-hint">Files go straight to your browser's downloads folder without prompting.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 4. Appearance ── -->
+      <section class="section" id="sec-appearance">
+        <div class="section-header">
+          <h2 class="section-title">Appearance</h2>
+          <p class="section-desc">Color scheme for the Snapr popup and settings page.</p>
+        </div>
+        <div class="section-body">
+          <div class="field-row">
+            <span class="field-label">Theme</span>
+            <div class="seg-control" id="themeControl">
+              <button class="seg-btn" data-value="system">System</button>
+              <button class="seg-btn" data-value="light">Light</button>
+              <button class="seg-btn" data-value="dark">Dark</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 5. Full-page limits ── -->
+      <section class="section" id="sec-fullpage">
+        <div class="section-header">
+          <h2 class="section-title">Full-page capture</h2>
+          <p class="section-desc">Limit scroll height to prevent runaway captures on infinite-scroll pages.</p>
+        </div>
+        <div class="section-body">
+          <div class="field-row">
+            <label class="field-label" for="maxHeightSlider">Max height</label>
+            <div class="slider-wrap">
+              <input type="range" id="maxHeightSlider" min="5000" max="50000" step="1000">
+              <output class="slider-value" id="maxHeightValue">15,000 px</output>
+            </div>
+          </div>
+          <p class="field-note">Full-page captures stop at this height. The popup warns when the page exceeds the cap.</p>
+        </div>
+      </section>
+
+      <!-- ── 6. History ── -->
+      <section class="section" id="sec-history">
+        <div class="section-header">
+          <h2 class="section-title">History</h2>
+          <p class="section-desc">Last 20 captures. Stored locally, never synced.</p>
+        </div>
+        <div class="section-body">
+
+          <div class="history-toolbar">
+            <input type="search" class="search-input" id="historySearch" placeholder="Search by filename…">
+            <div class="history-toolbar-actions">
+              <button class="btn-secondary" id="exportHistoryBtn">Export JSON</button>
+              <button class="btn-danger" id="clearHistoryBtn">Clear all</button>
+            </div>
+          </div>
+
+          <div class="history-full-list" id="historyFullList">
+            <div class="history-empty" id="historyEmpty">No captures yet.</div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── 7. Keyboard shortcut ── -->
+      <section class="section" id="sec-keyboard">
+        <div class="section-header">
+          <h2 class="section-title">Keyboard shortcut</h2>
+          <p class="section-desc">Capture the current tab instantly without opening the popup.</p>
+        </div>
+        <div class="section-body">
+          <div class="field-row">
+            <span class="field-label">macOS</span>
+            <div class="shortcut-combo">
+              <kbd class="shortcut-key">⌘</kbd>
+              <span class="shortcut-plus">+</span>
+              <kbd class="shortcut-key">Shift</kbd>
+              <span class="shortcut-plus">+</span>
+              <kbd class="shortcut-key">S</kbd>
+            </div>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Windows / Linux</span>
+            <div class="shortcut-combo">
+              <kbd class="shortcut-key">Alt</kbd>
+              <span class="shortcut-plus">+</span>
+              <kbd class="shortcut-key">Shift</kbd>
+              <span class="shortcut-plus">+</span>
+              <kbd class="shortcut-key">S</kbd>
+            </div>
+          </div>
+          <p class="field-note">
+            To reassign either shortcut, visit
+            <a class="link" href="#" id="shortcutLink">chrome://extensions/shortcuts</a>.
+            Chrome controls shortcut assignment — it can't be changed from within the extension.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── 8. About ── -->
+      <section class="section" id="sec-about">
+        <div class="section-header">
+          <h2 class="section-title">About</h2>
+        </div>
+        <div class="section-body">
+          <div class="about-row">
+            <span class="field-label">Version</span>
+            <span id="aboutVersion" class="about-value">—</span>
+          </div>
+          <div class="about-row">
+            <span class="field-label">GitHub</span>
+            <a class="link" href="https://github.com/idrewlong/snapr" target="_blank" rel="noopener">github.com/idrewlong/snapr</a>
+          </div>
+          <div class="about-row">
+            <span class="field-label">Privacy</span>
+            <span class="about-value">No data is collected or transmitted. Everything stays in your browser.</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="options.js" type="module"></script>
+</body>
+</html>

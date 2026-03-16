@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<!--
+  offscreen.html — Offscreen document for Canvas operations
+
+  MV3 service workers have no DOM access, so all Canvas work
+  (compositing, cropping, format conversion) happens here.
+
+  Created on demand via chrome.offscreen.createDocument()
+  with reason: 'CANVAS'
+-->
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+  <script src="offscreen.js"></script>
+</body>
+</html>

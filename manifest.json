@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Snapr",
+  "version": "1.0.0",
+  "description": "Clean website screenshots in one click.",
+
+  "permissions": ["activeTab", "downloads", "storage", "offscreen", "scripting", "windows"],
+  "optional_permissions": ["debugger"],
+
+  "action": {
+    "default_popup": "src/popup/popup.html"
+  },
+
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+
+  "content_scripts": [],
+
+  "options_page": "src/options/options.html",
+
+  "commands": {
+    "quick-capture": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac":     "Command+Shift+S",
+        "windows": "Alt+Shift+S",
+        "linux":   "Alt+Shift+S"
+      },
+      "description": "Capture current tab with default settings"
+    }
+  },
+
+  "icons": {}
+}
