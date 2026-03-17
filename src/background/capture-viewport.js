@@ -7,6 +7,7 @@
  */
 
 import { emulateViewport, clearViewportEmulation } from './viewport-emulation.js';
+import { SIZE_PRESETS } from '../lib/constants.js';
 
 /**
  * @param {number} tabId
@@ -37,17 +38,39 @@ export async function capture(tabId, options) {
     if (needsEmulation) await clearViewportEmulation(tabId);
   }
 
+  // Resize to preset dimensions — captureVisibleTab always captures at physical
+  // display resolution, so we must resize explicitly to match the selected preset.
+  if (needsEmulation) {
+    const preset = SIZE_PRESETS[options.sizePreset];
+    const targetW = preset ? preset.w : (options.customWidth  || 1440);
+    const targetH = preset ? preset.h : (options.customHeight || 900);
+    dataUrl = await resizeImage(dataUrl, targetW, targetH, options.format, options.quality);
+  }
+
   // captureVisibleTab doesn't support WebP — convert in offscreen document
-  if (options.format === 'WebP') {
+  if (options.format === 'WebP' && !needsEmulation) {
     return convertToWebP(dataUrl, options.quality);
   }
 
   return dataUrl;
 }
 
+async function resizeImage(dataUrl, width, height, format, quality) {
+  await ensureOffscreen();
+  return offscreenMessage({
+    type:    'RESIZE_IMAGE',
+    dataUrl,
+    width,
+    height,
+    format:  format.toLowerCase(),
+    quality,
+    target:  'offscreen',
+  });
+}
+
 async function convertToWebP(dataUrl, quality) {
   await ensureOffscreen();
-  return chrome.runtime.sendMessage({
+  return offscreenMessage({
     type:    'CONVERT_FORMAT',
     dataUrl,
     format:  'webp',
@@ -56,13 +79,19 @@ async function convertToWebP(dataUrl, quality) {
   });
 }
 
+async function offscreenMessage(message) {
+  const result = await chrome.runtime.sendMessage(message);
+  if (result?.error) throw new Error(`Offscreen error: ${result.error}`);
+  return result;
+}
+
 async function ensureOffscreen() {
   const existing = await chrome.offscreen.hasDocument();
   if (existing) return;
   try {
     await chrome.offscreen.createDocument({
       url:           'src/offscreen/offscreen.html',
-      reasons:       ['CANVAS'],
+      reasons:       ['BLOBS'],
       justification: 'Image format conversion and compositing',
     });
   } catch (err) {

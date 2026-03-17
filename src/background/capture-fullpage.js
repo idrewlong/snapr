@@ -78,7 +78,7 @@ export async function capture(tabId, options) {
 
 async function compositeFrames(frames, dimensions, options) {
   await ensureOffscreen();
-  return chrome.runtime.sendMessage({
+  const result = await chrome.runtime.sendMessage({
     type:    MSG.COMPOSITE_FRAMES,
     frames,
     dimensions,
@@ -86,6 +86,8 @@ async function compositeFrames(frames, dimensions, options) {
     quality: options.quality,
     target:  'offscreen',
   });
+  if (result?.error) throw new Error(`Offscreen error: ${result.error}`);
+  return result;
 }
 
 async function ensureOffscreen() {
@@ -93,7 +95,7 @@ async function ensureOffscreen() {
   try {
     await chrome.offscreen.createDocument({
       url:           'src/offscreen/offscreen.html',
-      reasons:       ['CANVAS'],
+      reasons:       ['BLOBS'],
       justification: 'Full-page frame compositing',
     });
   } catch (err) {

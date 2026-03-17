@@ -2,20 +2,24 @@
   "manifest_version": 3,
   "name": "Snapr",
   "version": "1.0.0",
-  "description": "Clean website screenshots in one click.",
+  "description": "Capture clean website screenshots in one click. Viewport, full page, or element. PNG, JPG, WebP. No account, no cloud.",
 
   "permissions": ["activeTab", "downloads", "storage", "offscreen", "scripting", "windows"],
-  "optional_permissions": ["debugger"],
 
   "action": {
-    "default_popup": "src/popup/popup.html"
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16":  "src/icons/16x16.png",
+      "32":  "src/icons/32x32.png",
+      "48":  "src/icons/48x48.png",
+      "128": "src/icons/128x128.png"
+    }
   },
 
   "background": {
-    "service_worker": "src/background/service-worker.js"
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
   },
-
-  "content_scripts": [],
 
   "options_page": "src/options/options.html",
 
@@ -23,7 +27,7 @@
     "quick-capture": {
       "suggested_key": {
         "default": "Alt+Shift+S",
-        "mac":     "Command+Shift+S",
+        "mac":     "MacCtrl+Shift+S",
         "windows": "Alt+Shift+S",
         "linux":   "Alt+Shift+S"
       },
@@ -31,5 +35,10 @@
     }
   },
 
-  "icons": {}
+  "icons": {
+    "16":  "src/icons/16x16.png",
+    "32":  "src/icons/32x32.png",
+    "48":  "src/icons/48x48.png",
+    "128": "src/icons/128x128.png"
+  }
 }

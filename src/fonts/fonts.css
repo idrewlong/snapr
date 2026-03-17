@@ -1,0 +1,30 @@
+/* Self-hosted fonts — no external network requests */
+
+/* Geist Mono — only Regular (400) is bundled; mapped across all weights
+   to prevent browser font synthesis artifacts. Add weight-specific files
+   (e.g. GeistMono-Medium.woff2) alongside matching @font-face blocks
+   if you need true 300/500/600 rendering. */
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url('GeistMono-Regular.woff2') format('woff2');
+}
+
+/* Instrument Serif — regular and italic */
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('InstrumentSerif-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url('InstrumentSerif-Italic.woff2') format('woff2');
+}

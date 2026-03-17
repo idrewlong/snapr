@@ -81,36 +81,6 @@ describe('handleQuickCapture — happy path', () => {
   });
 });
 
-// ── Viewport emulation permission denied → fallback ───────────────────────────
-
-describe('handleQuickCapture — debugger permission denied fallback', () => {
-  beforeEach(() => {
-    setupHappyPath();
-    // Settings request a size preset that requires the debugger
-    chrome.storage.sync.get.mockImplementation(async (defaults) => ({
-      ...defaults,
-      sizePreset: 'Desktop',
-    }));
-    // User denies the debugger permission request
-    chrome.permissions.contains.mockResolvedValue(false);
-    chrome.permissions.request.mockResolvedValue(false);
-  });
-
-  it('still calls captureVisibleTab after falling back to As-is', async () => {
-    await handleQuickCapture(TAB);
-    expect(chrome.tabs.captureVisibleTab).toHaveBeenCalled();
-  });
-
-  it('still triggers a download after the fallback', async () => {
-    await handleQuickCapture(TAB);
-    expect(chrome.downloads.download).toHaveBeenCalledOnce();
-  });
-
-  it('does not attach the debugger when permission is denied', async () => {
-    await handleQuickCapture(TAB);
-    expect(chrome.debugger.attach).not.toHaveBeenCalled();
-  });
-});
 
 // ── Error handling ────────────────────────────────────────────────────────────
 

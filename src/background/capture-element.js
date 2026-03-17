@@ -45,7 +45,7 @@ export async function captureSelected(_tab, rect, devicePixelRatio, options) {
 
   // Crop in offscreen document
   await ensureOffscreen();
-  return chrome.runtime.sendMessage({
+  const result = await chrome.runtime.sendMessage({
     type:         MSG.CROP_IMAGE,
     dataUrl,
     rect:         scaled,
@@ -53,13 +53,15 @@ export async function captureSelected(_tab, rect, devicePixelRatio, options) {
     quality:      options.quality,
     target:       'offscreen',
   });
+  if (result?.error) throw new Error(`Offscreen error: ${result.error}`);
+  return result;
 }
 
 async function ensureOffscreen() {
   if (!await chrome.offscreen.hasDocument()) {
     await chrome.offscreen.createDocument({
-      url:         '../offscreen/offscreen.html',
-      reasons:     ['CANVAS'],
+      url:         'src/offscreen/offscreen.html',
+      reasons:     ['BLOBS'],
       justification: 'Element crop',
     });
   }

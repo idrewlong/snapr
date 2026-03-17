@@ -7,7 +7,7 @@
 
 'use strict';
 
-import { buildFilename, slugify } from '../lib/filename.js';
+import { buildFilename } from '../lib/filename.js';
 import { getSettings, updateSettings, getHistory, removeHistoryRecord, clearHistory } from '../lib/storage.js';
 
 const isExtension = typeof chrome !== 'undefined' && !!chrome?.runtime?.id;
@@ -52,18 +52,14 @@ function applyTheme(theme) {
 function hydrateAll(s) {
   setSegControl('modeControl',   s.mode);
   setSegControl('formatControl', s.format);
-  setSegControl('sizeControl',   s.sizePreset);
   setSegControl('themeControl',  s.theme);
 
   document.getElementById('qualityInput').value    = s.quality;
-  document.getElementById('customW').value         = s.customWidth;
-  document.getElementById('customH').value         = s.customHeight;
   document.getElementById('patternInput').value    = s.filenamePattern;
   document.getElementById('maxHeightSlider').value = s.maxFullPageHeight;
   document.getElementById('maxHeightValue').value  = formatPx(s.maxFullPageHeight);
 
   setRadio('saveLocationGroup', s.saveLocation);
-  toggleCustomSizeRow(s.sizePreset);
   updateFilenamePreview(s.filenamePattern, s.format);
 }
 
@@ -79,10 +75,6 @@ function setRadio(groupId, value) {
   });
 }
 
-function toggleCustomSizeRow(sizePreset) {
-  document.getElementById('customSizeRow').classList.toggle('hidden', sizePreset !== 'Custom');
-}
-
 // ── Event listeners ───────────────────────────────────────────────────────────
 
 function initEventListeners() {
@@ -91,10 +83,6 @@ function initEventListeners() {
   bindSegControl('formatControl', v => {
     save({ format: v });
     updateFilenamePreview(settings.filenamePattern, v);
-  });
-  bindSegControl('sizeControl', v => {
-    save({ sizePreset: v });
-    toggleCustomSizeRow(v);
   });
   bindSegControl('themeControl', v => {
     save({ theme: v });
@@ -106,14 +94,6 @@ function initEventListeners() {
     const val = clamp(parseInt(e.target.value, 10) || 90, 1, 100);
     e.target.value = val;
     save({ quality: val });
-  }, 400));
-
-  document.getElementById('customW').addEventListener('input', debounce((e) => {
-    save({ customWidth: parseInt(e.target.value, 10) || 1440 });
-  }, 400));
-
-  document.getElementById('customH').addEventListener('input', debounce((e) => {
-    save({ customHeight: parseInt(e.target.value, 10) || 900 });
   }, 400));
 
   document.getElementById('patternInput').addEventListener('input', debounce((e) => {
@@ -223,9 +203,9 @@ function renderHistory(items, query) {
       </div>
       <div class="history-info">
         <div class="history-name">${escHtml(record.filename)}</div>
-        <div class="history-meta">${timeAgo(record.capturedAt)} · ${record.mode || ''}</div>
+        <div class="history-meta">${timeAgo(record.capturedAt)} · ${escHtml(record.mode || '')}</div>
       </div>
-      <span class="history-badge">${(record.format || 'png').toUpperCase()}</span>
+      <span class="history-badge">${escHtml((record.format || 'png').toUpperCase())}</span>
       <button class="history-del-btn" title="Delete" aria-label="Delete">✕</button>`;
 
     row.querySelector('.history-del-btn').addEventListener('click', async () => {

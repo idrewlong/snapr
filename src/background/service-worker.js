@@ -36,17 +36,7 @@ export async function handleQuickCapture(tab) {
   try {
     const settings = await getSettings();
 
-    let dataUrl;
-    try {
-      dataUrl = await capture(tab.id, settings);
-    } catch (err) {
-      // Debugger permission denied — fall back to as-is viewport capture
-      if (err.message?.includes('Debugger permission')) {
-        dataUrl = await capture(tab.id, { ...settings, sizePreset: 'As-is' });
-      } else {
-        throw err;
-      }
-    }
+    const dataUrl = await capture(tab.id, settings);
 
     const ext      = settings.format.toLowerCase();
     const basename = buildFilename(settings.filenamePattern, {

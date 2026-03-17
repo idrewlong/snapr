@@ -1,177 +1,321 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Snapr</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Snapr</title>
+		<link rel="stylesheet" href="../fonts/fonts.css" />
+		<link rel="stylesheet" href="popup.css" />
+	</head>
+	<body>
+		<!-- ── Header ── -->
+		<div class="header">
+			<div class="wordmark">snap<em>r</em></div>
+			<div class="header-actions">
+				<button class="icon-btn" id="historyBtn" data-tooltip="History">
+					<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+						<circle
+							cx="8"
+							cy="8"
+							r="6.5"
+							stroke="currentColor"
+							stroke-width="1.4"
+						/>
+						<path
+							d="M8 5v3.5l2 1.5"
+							stroke="currentColor"
+							stroke-width="1.4"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</button>
+				<button class="icon-btn" id="themeBtn" data-tooltip="Toggle theme">
+					<!-- Icon swapped by popup.js based on active theme -->
+				</button>
+				<button class="icon-btn" id="settingsBtn" data-tooltip="Settings">
+					<!-- Gear icon -->
+					<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+						<path
+							d="M6.5 1.5h3l.4 1.5c.4.1.8.3 1.1.6l1.4-.5 1.5 2.6-1 1.1c.1.3.1.5.1.8s0 .5-.1.8l1 1.1-1.5 2.6-1.4-.5c-.3.3-.7.5-1.1.6l-.4 1.5h-3l-.4-1.5a4.9 4.9 0 0 1-1.1-.6l-1.4.5L2.1 9l1-1.1A4.9 4.9 0 0 1 3 7.1c0-.3 0-.5.1-.8l-1-1.1 1.5-2.6 1.4.5c.3-.3.7-.5 1.1-.6l.4-1.5z"
+							stroke="currentColor"
+							stroke-width="1.3"
+							stroke-linejoin="round"
+						/>
+						<circle
+							cx="8"
+							cy="8"
+							r="2"
+							stroke="currentColor"
+							stroke-width="1.3"
+						/>
+					</svg>
+				</button>
+			</div>
+		</div>
 
-  <!-- ── Header ── -->
-  <div class="header">
-    <div class="wordmark">snap<em>r</em></div>
-    <div class="header-actions">
-      <button class="icon-btn" id="historyBtn" data-tooltip="History">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
-          <path d="M8 5v3.5l2 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      <button class="icon-btn" id="themeBtn" data-tooltip="Toggle theme">
-        <!-- Icon swapped by popup.js based on active theme -->
-      </button>
-      <button class="icon-btn" id="settingsBtn" data-tooltip="Settings">
-        <!-- Gear icon -->
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <path d="M6.5 1.5h3l.4 1.5c.4.1.8.3 1.1.6l1.4-.5 1.5 2.6-1 1.1c.1.3.1.5.1.8s0 .5-.1.8l1 1.1-1.5 2.6-1.4-.5c-.3.3-.7.5-1.1.6l-.4 1.5h-3l-.4-1.5a4.9 4.9 0 0 1-1.1-.6l-1.4.5L2.1 9l1-1.1A4.9 4.9 0 0 1 3 7.1c0-.3 0-.5.1-.8l-1-1.1 1.5-2.6 1.4.5c.3-.3.7-.5 1.1-.6l.4-1.5z"
-            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-          <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/>
-        </svg>
-      </button>
-    </div>
-  </div>
+		<!-- ── Main content ── -->
+		<div class="body">
+			<!-- Tab preview thumbnail -->
+			<div class="thumbnail-wrap" id="thumbnailWrap">
+				<div class="skeleton" id="skeleton"></div>
+				<img id="thumbnailImg" class="thumbnail-img" alt="Page preview" />
+			</div>
 
-  <!-- ── Main content ── -->
-  <div class="body">
+			<!-- Capture mode: Viewport / Full Page / Element -->
+			<div class="mode-selector" id="modeSelector">
+				<button class="mode-btn active" data-mode="viewport">
+					<svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+						<rect
+							x="1"
+							y="1"
+							width="10"
+							height="10"
+							rx="1.5"
+							stroke="currentColor"
+							stroke-width="1.4"
+						/>
+						<path d="M1 9h10" stroke="currentColor" stroke-width="1.4" />
+					</svg>
+					Viewport
+				</button>
+				<button class="mode-btn" data-mode="fullpage">
+					<svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+						<rect
+							x="1"
+							y="1"
+							width="10"
+							height="10"
+							rx="1.5"
+							stroke="currentColor"
+							stroke-width="1.4"
+						/>
+						<path
+							d="M6 4v4M4 6l2-2 2 2"
+							stroke="currentColor"
+							stroke-width="1.3"
+							stroke-linecap="round"
+						/>
+					</svg>
+					Full Page
+				</button>
+				<button class="mode-btn" data-mode="element">
+					<svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+						<rect
+							x="1"
+							y="2"
+							width="5"
+							height="5"
+							rx="1"
+							stroke="currentColor"
+							stroke-width="1.4"
+						/>
+						<rect
+							x="6"
+							y="5"
+							width="5"
+							height="5"
+							rx="1"
+							stroke="currentColor"
+							stroke-width="1.4"
+						/>
+					</svg>
+					Element
+				</button>
+			</div>
 
-    <!-- Tab preview thumbnail -->
-    <div class="thumbnail-wrap" id="thumbnailWrap">
-      <div class="skeleton" id="skeleton"></div>
-      <img id="thumbnailImg" class="thumbnail-img" alt="Page preview">
-    </div>
+			<!-- Viewport size preset — hidden until size export is stable -->
+			<div class="control-row hidden" id="sizeRow">
+				<span class="control-label">Size</span>
+				<div class="flat-select" id="sizeSelect">
+					<div class="flat-select-btn" id="sizeTrigger">
+						<span id="sizeLabel">As-is</span>
+						<svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+							<path
+								d="M2 3.5L5 6.5L8 3.5"
+								stroke="currentColor"
+								stroke-width="1.4"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					</div>
+					<div class="flat-select-menu" id="sizeMenu">
+						<div class="flat-select-option selected" data-value="As-is">
+							As-is
+						</div>
+						<div class="flat-select-option" data-value="Desktop HD">
+							Desktop HD <span class="option-hint">1920×1080</span>
+						</div>
+						<div class="flat-select-option" data-value="Desktop">
+							Desktop <span class="option-hint">1440×900</span>
+						</div>
+						<div class="flat-select-option" data-value="Laptop">
+							Laptop <span class="option-hint">1280×800</span>
+						</div>
+						<div class="flat-select-option" data-value="Tablet">
+							Tablet <span class="option-hint">768×1024</span>
+						</div>
+						<div class="flat-select-option" data-value="Mobile">
+							Mobile <span class="option-hint">375×812</span>
+						</div>
+						<div class="flat-select-option" data-value="Custom">Custom…</div>
+					</div>
+				</div>
+			</div>
 
-    <!-- Capture mode: Viewport / Full Page / Element -->
-    <div class="mode-selector" id="modeSelector">
-      <button class="mode-btn active" data-mode="viewport">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-          <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
-          <path d="M1 9h10" stroke="currentColor" stroke-width="1.4"/>
-        </svg>
-        Viewport
-      </button>
-      <button class="mode-btn" data-mode="fullpage">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-          <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
-          <path d="M6 4v4M4 6l2-2 2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-        </svg>
-        Full Page
-      </button>
-      <button class="mode-btn" data-mode="element">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-          <rect x="1" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/>
-          <rect x="6" y="5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/>
-        </svg>
-        Element
-      </button>
-    </div>
+			<!-- Custom width/height — hidden with size row -->
+			<div class="custom-size-row" id="customSizeRow" style="display:none">
+				<input
+					type="number"
+					id="customW"
+					value="1440"
+					placeholder="W"
+					min="100"
+					max="7680"
+				/>
+				<span class="sep">×</span>
+				<input
+					type="number"
+					id="customH"
+					value="900"
+					placeholder="H"
+					min="100"
+					max="7680"
+				/>
+				<span class="sep" style="font-size: 11px; color: var(--text-tertiary)"
+					>px</span
+				>
+			</div>
 
-    <!-- Viewport size preset -->
-    <div class="control-row">
-      <span class="control-label">Size</span>
-      <div class="flat-select" id="sizeSelect">
-        <div class="flat-select-btn" id="sizeTrigger">
-          <span id="sizeLabel">As-is</span>
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="flat-select-menu" id="sizeMenu">
-          <div class="flat-select-option selected" data-value="As-is">As-is</div>
-          <div class="flat-select-option" data-value="Desktop HD">Desktop HD <span class="option-hint">1920×1080</span></div>
-          <div class="flat-select-option" data-value="Desktop">Desktop <span class="option-hint">1440×900</span></div>
-          <div class="flat-select-option" data-value="Laptop">Laptop <span class="option-hint">1280×800</span></div>
-          <div class="flat-select-option" data-value="Tablet">Tablet <span class="option-hint">768×1024</span></div>
-          <div class="flat-select-option" data-value="Mobile">Mobile <span class="option-hint">375×812</span></div>
-          <div class="flat-select-option" data-value="Custom">Custom…</div>
-        </div>
-      </div>
-    </div>
+			<!-- Output format and compression quality -->
+			<div class="format-row">
+				<span class="control-label">Format</span>
+				<div
+					class="flat-select"
+					id="formatSelect"
+					style="flex: 0 0 auto; width: 86px"
+				>
+					<div class="flat-select-btn" id="formatTrigger">
+						<span id="formatLabel">PNG</span>
+						<svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+							<path
+								d="M2 3.5L5 6.5L8 3.5"
+								stroke="currentColor"
+								stroke-width="1.4"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					</div>
+					<div class="flat-select-menu" id="formatMenu">
+						<div class="flat-select-option selected" data-value="PNG">PNG</div>
+						<div class="flat-select-option" data-value="JPG">JPG</div>
+						<div class="flat-select-option" data-value="WebP">WebP</div>
+					</div>
+				</div>
+				<div class="quality-wrap">
+					<span class="quality-label">Quality</span>
+					<input
+						type="number"
+						class="quality-input"
+						id="qualityInput"
+						value="90"
+						min="1"
+						max="100"
+						disabled
+					/>
+				</div>
+			</div>
 
-    <!-- Custom width/height (visible only when "Custom" selected) -->
-    <div class="custom-size-row" id="customSizeRow">
-      <input type="number" id="customW" value="1440" placeholder="W" min="100" max="7680">
-      <span class="sep">×</span>
-      <input type="number" id="customH" value="900" placeholder="H" min="100" max="7680">
-      <span class="sep" style="font-size:11px;color:var(--text-tertiary)">px</span>
-    </div>
+			<!-- Primary action -->
+			<button class="capture-btn" id="captureBtn">
+				<span class="btn-icon" id="btnIcon">
+					<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+						<circle
+							cx="8"
+							cy="9"
+							r="4"
+							stroke="currentColor"
+							stroke-width="1.5"
+						/>
+						<path
+							d="M6 3h4l1 2H5L6 3z"
+							stroke="currentColor"
+							stroke-width="1.3"
+							stroke-linejoin="round"
+						/>
+						<path
+							d="M2 5.5h1M13 5.5h1"
+							stroke="currentColor"
+							stroke-width="1.3"
+							stroke-linecap="round"
+						/>
+					</svg>
+				</span>
+				<span id="btnText">Capture</span>
+				<span class="size-badge" id="sizeBadge"></span>
+			</button>
 
-    <!-- Output format and compression quality -->
-    <div class="format-row">
-      <span class="control-label">Format</span>
-      <div class="flat-select" id="formatSelect" style="flex:0 0 auto;width:86px">
-        <div class="flat-select-btn" id="formatTrigger">
-          <span id="formatLabel">PNG</span>
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="flat-select-menu" id="formatMenu">
-          <div class="flat-select-option selected" data-value="PNG">PNG</div>
-          <div class="flat-select-option" data-value="JPG">JPG</div>
-          <div class="flat-select-option" data-value="WebP">WebP</div>
-        </div>
-      </div>
-      <div class="quality-wrap">
-        <span class="quality-label">Quality</span>
-        <input type="number" class="quality-input" id="qualityInput" value="90" min="1" max="100" disabled>
-      </div>
-    </div>
+			<!-- Filename with inline edit -->
+			<div class="filename-row">
+				<span class="filename-icon">
+					<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+						<path
+							d="M3 1h4.5L10 3.5V11H3V1z"
+							stroke="currentColor"
+							stroke-width="1.2"
+							stroke-linejoin="round"
+						/>
+						<path
+							d="M7 1v3h3"
+							stroke="currentColor"
+							stroke-width="1.2"
+							stroke-linecap="round"
+						/>
+					</svg>
+				</span>
+				<span class="filename-text" id="filenameText">example-com.png</span>
+				<input
+					type="text"
+					class="filename-input"
+					id="filenameInput"
+					value="example-com.png"
+				/>
+				<button class="edit-link" id="editLink">edit</button>
+			</div>
+		</div>
+		<!-- /.body -->
 
-    <!-- Primary action -->
-    <button class="capture-btn" id="captureBtn">
-      <span class="btn-icon" id="btnIcon">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <circle cx="8" cy="9" r="4" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M6 3h4l1 2H5L6 3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
-          <path d="M2 5.5h1M13 5.5h1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <span id="btnText">Capture</span>
-      <span class="size-badge" id="sizeBadge"></span>
-    </button>
+		<!-- ── History (collapsed by default) ── -->
+		<div class="history-section">
+			<button class="history-toggle" id="historyToggleBtn">
+				<span class="toggle-arrow">▶</span>
+				History
+				<span class="history-count" id="historyCount">(empty)</span>
+			</button>
+			<div class="history-list" id="historyList">
+				<!-- Populated dynamically by popup.js -->
+				<div class="history-footer">
+					<a id="historyViewAll" href="#">
+						View all in settings
+						<svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+							<path
+								d="M3 2l4 3-4 3"
+								stroke="currentColor"
+								stroke-width="1.3"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					</a>
+				</div>
+			</div>
+		</div>
 
-    <!-- Filename with inline edit -->
-    <div class="filename-row">
-      <span class="filename-icon">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M3 1h4.5L10 3.5V11H3V1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
-          <path d="M7 1v3h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <span class="filename-text" id="filenameText">example-com.png</span>
-      <input type="text" class="filename-input" id="filenameInput" value="example-com.png">
-      <button class="edit-link" id="editLink">edit</button>
-    </div>
+		<!-- Toast container -->
+		<div class="toast-container" id="toastContainer"></div>
 
-  </div><!-- /.body -->
-
-  <!-- ── History (collapsed by default) ── -->
-  <div class="history-section">
-    <button class="history-toggle" id="historyToggleBtn">
-      <span class="toggle-arrow">▶</span>
-      History
-      <span class="history-count" id="historyCount">(empty)</span>
-    </button>
-    <div class="history-list" id="historyList">
-      <!-- Populated dynamically by popup.js -->
-      <div class="history-footer">
-        <a id="historyViewAll" href="#">
-          View all in settings
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M3 2l4 3-4 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast container -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <script src="popup.js"></script>
-</body>
+		<script type="module" src="popup.js"></script>
+	</body>
 </html>

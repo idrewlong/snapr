@@ -162,7 +162,7 @@ body {
 .wordmark {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 17px;
+  font-size: 22px;
   letter-spacing: 0.01em;
   color: var(--text-primary);
   line-height: 1;
@@ -346,6 +346,7 @@ body {
   align-items: center;
   gap: 8px;
 }
+.control-row.hidden { display: none; }
 
 .control-label {
   font-family: var(--font-mono);

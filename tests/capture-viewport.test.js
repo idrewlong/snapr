@@ -3,8 +3,9 @@
  * Unit tests for src/background/capture-viewport.js
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { capture } from '../src/background/capture-viewport.js';
+import { SIZE_PRESETS } from '../src/lib/constants.js';
 
 const TAB_ID = 1;
 const BASE_OPTIONS = { format: 'PNG', quality: 90, sizePreset: 'As-is' };
@@ -93,7 +94,6 @@ describe('capture — WebP format', () => {
 
 describe('capture — with size preset (emulation)', () => {
   beforeEach(() => {
-    chrome.permissions.contains.mockResolvedValue(true);
     chrome.tabs.captureVisibleTab.mockResolvedValue(FAKE_DATA_URL);
   });
 
@@ -117,6 +117,68 @@ describe('capture — with size preset (emulation)', () => {
     ).rejects.toThrow('capture failed');
 
     expect(chrome.debugger.detach).toHaveBeenCalledWith({ tabId: TAB_ID });
+  });
+});
+
+// ── Export size matches preset dimensions ─────────────────────────────────────
+
+describe('capture — export size matches selected preset', () => {
+  const RESIZED_DATA_URL = 'data:image/png;base64,RESIZED=';
+
+  beforeEach(() => {
+    chrome.permissions.contains.mockResolvedValue(true);
+    chrome.tabs.captureVisibleTab.mockResolvedValue(FAKE_DATA_URL);
+    chrome.runtime.sendMessage.mockResolvedValue(RESIZED_DATA_URL);
+  });
+
+  // Test every named preset
+  const namedPresets = Object.entries(SIZE_PRESETS).filter(([, dims]) => dims !== null);
+
+  namedPresets.forEach(([name, { w, h }]) => {
+    it(`sends RESIZE_IMAGE with ${w}x${h} for "${name}" preset`, async () => {
+      await capture(TAB_ID, { ...BASE_OPTIONS, sizePreset: name });
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type:   'RESIZE_IMAGE',
+          width:  w,
+          height: h,
+          target: 'offscreen',
+        })
+      );
+    });
+
+    it(`returns the resized data URL for "${name}" preset`, async () => {
+      const result = await capture(TAB_ID, { ...BASE_OPTIONS, sizePreset: name });
+      expect(result).toBe(RESIZED_DATA_URL);
+    });
+  });
+
+  it('sends RESIZE_IMAGE with customWidth/customHeight for "Custom" preset', async () => {
+    await capture(TAB_ID, {
+      ...BASE_OPTIONS,
+      sizePreset:   'Custom',
+      customWidth:  1600,
+      customHeight: 900,
+    });
+
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type:   'RESIZE_IMAGE',
+        width:  1600,
+        height: 900,
+        target: 'offscreen',
+      })
+    );
+  });
+
+  it('does NOT send RESIZE_IMAGE for "As-is" preset', async () => {
+    await capture(TAB_ID, BASE_OPTIONS); // sizePreset: 'As-is'
+
+    const resizeCalls = chrome.runtime.sendMessage.mock.calls.filter(
+      ([msg]) => msg?.type === 'RESIZE_IMAGE'
+    );
+    expect(resizeCalls).toHaveLength(0);
   });
 });
 

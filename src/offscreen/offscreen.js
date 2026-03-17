@@ -14,6 +14,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     CROP_IMAGE:        () => cropImage(message.dataUrl, message.rect, message.outputFormat, message.quality),
     COMPOSITE_FRAMES:  () => compositeFrames(message.frames, message.dimensions, message.format, message.quality),
     CONVERT_FORMAT:    () => convertFormat(message.dataUrl, message.format, message.quality),
+    RESIZE_IMAGE:      () => resizeImage(message.dataUrl, message.width, message.height, message.format, message.quality),
   };
 
   const handler = handlers[message.type];
@@ -60,6 +61,16 @@ async function compositeFrames(frames, dimensions, format, quality) {
     bitmap.close();
   }
 
+  return canvasToDataUrl(canvas, format, quality);
+}
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+
+async function resizeImage(dataUrl, width, height, format, quality) {
+  const bitmap = await loadBitmap(dataUrl);
+  const canvas = new OffscreenCanvas(width, height);
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
   return canvasToDataUrl(canvas, format, quality);
 }
 

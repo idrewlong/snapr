@@ -14,6 +14,9 @@
 
 'use strict';
 
+import { buildFilename } from '../lib/filename.js';
+import { capture as captureViewport } from '../background/capture-viewport.js';
+
 // ── Environment detection ─────────────────────────────────────────────────────
 
 const isExtension = typeof chrome !== 'undefined' && !!chrome?.runtime?.id;
@@ -49,12 +52,13 @@ const historyStore = {
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const DEFAULTS = {
-  format:       'PNG',
-  quality:      90,
-  mode:         'viewport',
-  sizePreset:   'As-is',
-  customWidth:  1440,
-  customHeight: 900,
+  format:          'PNG',
+  quality:         90,
+  mode:            'viewport',
+  sizePreset:      'As-is',
+  customWidth:     1440,
+  customHeight:    900,
+  filenamePattern: '{domain}-{path}',
 };
 
 const SIZE_PRESETS = {
@@ -68,6 +72,7 @@ const SIZE_PRESETS = {
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let state           = { ...DEFAULTS };
+let currentTab      = null;  // active tab info, queried at boot
 let captureState    = 'idle'; // 'idle' | 'loading' | 'success' | 'error'
 let filenameEditing = false;
 let historyOpen     = false;
@@ -78,6 +83,12 @@ let pendingCapture  = null;  // set when popup reopens after element selection
 document.addEventListener('DOMContentLoaded', async () => {
   const saved = await storage.get(DEFAULTS);
   state = { ...DEFAULTS, ...saved };
+
+  if (isExtension) {
+    try {
+      [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    } catch { /* ignore */ }
+  }
 
   // Apply manually-set theme (overrides prefers-color-scheme)
   const { theme = 'system' } = await storage.get({ theme: 'system' });
@@ -348,6 +359,7 @@ async function setMode(mode, persist = true) {
   document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
+
   updateFilename();
   if (persist) storage.set({ mode });
 }
@@ -373,7 +385,7 @@ function updateSizeBadge() {
   const label  = state.sizePreset;
   const preset = SIZE_PRESETS[label];
 
-  if (label === 'As-is') {
+  if (state.mode !== 'viewport' || label === 'As-is') {
     badge.classList.remove('visible');
   } else if (label === 'Custom') {
     badge.textContent = `${state.customWidth}×${state.customHeight}`;
@@ -410,12 +422,13 @@ function toggleSelect(id) {
 // ── Filename ──────────────────────────────────────────────────────────────────
 
 function generateFilename() {
-  const ext = state.format.toLowerCase();
-  if (isExtension) {
-    // Will be replaced with real lib/filename.js token logic
-    return `screenshot-${state.mode}.${ext}`;
-  }
-  return `example-com-${state.mode}.${ext}`;
+  const ext   = state.format.toLowerCase();
+  const url   = pendingCapture?.sourceUrl   ?? currentTab?.url   ?? '';
+  const title = pendingCapture?.sourceTitle ?? currentTab?.title ?? '';
+  const stem  = buildFilename(state.filenamePattern || '{domain}-{path}', {
+    url, title, mode: state.mode,
+  });
+  return `${stem}.${ext}`;
 }
 
 function updateFilename() {
@@ -446,6 +459,7 @@ function toggleFilenameEdit() {
 
 async function doCapture() {
   if (captureState !== 'idle') return;
+
   captureState = 'loading';
 
   const btn  = document.getElementById('captureBtn');
@@ -470,7 +484,11 @@ async function doCapture() {
         ? await convertPending(pendingCapture.dataUrl)
         : state.mode === 'fullpage'
           ? await captureFullPage()
-          : await captureVisibleTab();
+          : await captureViewport(currentTab.id, {
+              format:     state.format,
+              quality:    state.quality,
+              sizePreset: 'As-is',
+            });
       _lastCaptureDataUrl = dataUrl;
       const blobUrl  = dataUrlToBlobUrl(dataUrl);
 
@@ -509,30 +527,6 @@ async function doCapture() {
   }
 
   setTimeout(() => resetCaptureBtn(btn, icon, text), 1800);
-}
-
-async function captureVisibleTab() {
-  const chromeFormat = state.format === 'PNG' ? 'png' : 'jpeg';
-  const dataUrl = await chrome.tabs.captureVisibleTab(null, {
-    format:  chromeFormat,
-    quality: state.quality,
-  });
-
-  // Convert to WebP using a canvas in the popup (no offscreen doc needed)
-  if (state.format === 'WebP') {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width  = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        canvas.getContext('2d').drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/webp', state.quality / 100));
-      };
-      img.src = dataUrl;
-    });
-  }
-  return dataUrl;
 }
 
 // Re-encode the stored PNG to the user's chosen format/quality
@@ -754,7 +748,7 @@ function renderHistory(items) {
   // Remove old items (keep footer)
   list.querySelectorAll('.history-item').forEach(el => el.remove());
 
-  items.slice(0, 5).forEach(record => {
+  items.slice(0, 3).forEach(record => {
     const item = document.createElement('div');
     item.className = 'history-item';
     item.innerHTML = `
@@ -762,7 +756,7 @@ function renderHistory(items) {
         <img src="${record.thumbnail || ''}" alt="">
       </div>
       <div class="history-info">
-        <div class="history-name">${record.filename}</div>
+        <div class="history-name">${escHtml(record.filename)}</div>
         <div class="history-meta">${timeAgo(record.capturedAt)}</div>
       </div>
       <div class="history-actions">
@@ -787,6 +781,14 @@ function renderHistory(items) {
 
     list.insertBefore(item, footer);
   });
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function timeAgo(iso) {
@@ -854,7 +856,7 @@ function showToast(msg, type = 'info') {
   toast.className = `toast ${type !== 'info' ? type : ''}`.trim();
   toast.innerHTML = `
     <span class="toast-icon">${icons[type] || 'ℹ'}</span>
-    <span class="toast-msg">${msg}</span>
+    <span class="toast-msg">${escHtml(msg)}</span>
     <button class="toast-close">✕</button>`;
   toast.querySelector('.toast-close').addEventListener('click', () => dismissToast(id));
 

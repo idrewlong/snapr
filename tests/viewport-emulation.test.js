@@ -12,42 +12,13 @@ const TAB_ID = 42;
 // ── emulateViewport ────────────────────────────────────────────────────────────
 
 describe('emulateViewport', () => {
-  it('requests debugger permission when not already granted', async () => {
-    chrome.permissions.contains.mockResolvedValue(false);
-    chrome.permissions.request.mockResolvedValue(true);
-
-    await emulateViewport(TAB_ID, { sizePreset: 'Desktop' });
-
-    expect(chrome.permissions.request).toHaveBeenCalledWith({ permissions: ['debugger'] });
-  });
-
-  it('does not request permission if already granted', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
-    await emulateViewport(TAB_ID, { sizePreset: 'Desktop' });
-
-    expect(chrome.permissions.request).not.toHaveBeenCalled();
-  });
-
-  it('throws when debugger permission is denied', async () => {
-    chrome.permissions.contains.mockResolvedValue(false);
-    chrome.permissions.request.mockResolvedValue(false);
-
-    await expect(emulateViewport(TAB_ID, { sizePreset: 'Desktop' }))
-      .rejects.toThrow('Debugger permission required');
-  });
-
   it('attaches the debugger to the given tabId', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
     await emulateViewport(TAB_ID, { sizePreset: 'Desktop' });
 
     expect(chrome.debugger.attach).toHaveBeenCalledWith({ tabId: TAB_ID }, '1.3');
   });
 
   it('sends Emulation.setDeviceMetricsOverride with Desktop preset dimensions', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
     await emulateViewport(TAB_ID, { sizePreset: 'Desktop' });
 
     expect(chrome.debugger.sendCommand).toHaveBeenCalledWith(
@@ -58,8 +29,6 @@ describe('emulateViewport', () => {
   });
 
   it('sends Emulation.setDeviceMetricsOverride with Mobile preset dimensions', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
     await emulateViewport(TAB_ID, { sizePreset: 'Mobile' });
 
     expect(chrome.debugger.sendCommand).toHaveBeenCalledWith(
@@ -70,8 +39,6 @@ describe('emulateViewport', () => {
   });
 
   it('sets mobile: true for widths <= 768', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
     await emulateViewport(TAB_ID, { sizePreset: 'Tablet' }); // 768px
 
     const call = chrome.debugger.sendCommand.mock.calls[0][2];
@@ -79,8 +46,6 @@ describe('emulateViewport', () => {
   });
 
   it('sets mobile: false for widths > 768', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
     await emulateViewport(TAB_ID, { sizePreset: 'Laptop' }); // 1280px
 
     const call = chrome.debugger.sendCommand.mock.calls[0][2];
@@ -88,17 +53,13 @@ describe('emulateViewport', () => {
   });
 
   it('always sets deviceScaleFactor to 2', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
     await emulateViewport(TAB_ID, { sizePreset: 'Desktop HD' });
 
     const call = chrome.debugger.sendCommand.mock.calls[0][2];
     expect(call.deviceScaleFactor).toBe(2);
   });
 
-  it('uses customWidth/customHeight when sizePreset is not in presets', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
+  it('uses customWidth/customHeight when sizePreset is Custom', async () => {
     await emulateViewport(TAB_ID, {
       sizePreset:   'Custom',
       customWidth:  1600,
@@ -113,8 +74,6 @@ describe('emulateViewport', () => {
   });
 
   it('falls back to 1440×900 when customWidth/customHeight are missing', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
     await emulateViewport(TAB_ID, { sizePreset: 'Custom' });
 
     expect(chrome.debugger.sendCommand).toHaveBeenCalledWith(
@@ -125,12 +84,9 @@ describe('emulateViewport', () => {
   });
 
   it('covers all preset names defined in SIZE_PRESETS', async () => {
-    chrome.permissions.contains.mockResolvedValue(true);
-
     for (const [name, dims] of Object.entries(SIZE_PRESETS)) {
       if (!dims) continue; // 'As-is' has no dimensions
       vi.clearAllMocks();
-      chrome.permissions.contains.mockResolvedValue(true);
       chrome.debugger.attach.mockResolvedValue(undefined);
       chrome.debugger.sendCommand.mockResolvedValue(undefined);
 
@@ -140,6 +96,12 @@ describe('emulateViewport', () => {
       expect(cmd.width).toBe(dims.w);
       expect(cmd.height).toBe(dims.h);
     }
+  });
+
+  it('does not call chrome.permissions.request (debugger is a required permission)', async () => {
+    await emulateViewport(TAB_ID, { sizePreset: 'Desktop' });
+
+    expect(chrome.permissions.request).not.toHaveBeenCalled();
   });
 });
 

@@ -18,8 +18,6 @@ import { SIZE_PRESETS } from '../lib/constants.js';
  * @param {number} [options.customHeight]
  */
 export async function emulateViewport(tabId, options) {
-  await requireDebuggerPermission();
-
   const preset = SIZE_PRESETS[options.sizePreset];
   const width  = preset ? preset.w : (options.customWidth  || 1440);
   const height = preset ? preset.h : (options.customHeight || 900);
@@ -42,12 +40,3 @@ export async function clearViewportEmulation(tabId) {
   } catch { /* ignore — already detached */ }
 }
 
-async function requireDebuggerPermission() {
-  const has = await chrome.permissions.contains({ permissions: ['debugger'] });
-  if (has) return;
-
-  const granted = await chrome.permissions.request({ permissions: ['debugger'] });
-  if (!granted) {
-    throw new Error('Debugger permission required for viewport presets.');
-  }
-}

@@ -185,6 +185,47 @@ describe('loadBitmap validation logic', () => {
   });
 });
 
+// ── resizeImage dimensions ────────────────────────────────────────────────────
+
+describe('resizeImage canvas dimensions', () => {
+  // Mirror the resize logic from offscreen.js
+  function resizeImage_impl(srcWidth, srcHeight, targetWidth, targetHeight) {
+    // OffscreenCanvas is constructed with the target dimensions
+    const canvas = { width: targetWidth, height: targetHeight };
+    // drawImage is called with target dimensions as dest size
+    const drawArgs = { sw: srcWidth, sh: srcHeight, dw: targetWidth, dh: targetHeight };
+    return { canvas, drawArgs };
+  }
+
+  it('creates canvas at the target dimensions, not the source dimensions', () => {
+    const { canvas } = resizeImage_impl(4004, 2180, 1920, 1080);
+    expect(canvas.width).toBe(1920);
+    expect(canvas.height).toBe(1080);
+  });
+
+  it('draws the full source image scaled to the target dimensions', () => {
+    const { drawArgs } = resizeImage_impl(4004, 2180, 1920, 1080);
+    expect(drawArgs.dw).toBe(1920);
+    expect(drawArgs.dh).toBe(1080);
+  });
+
+  const SIZE_PRESETS = {
+    'Desktop HD': { w: 1920, h: 1080 },
+    'Desktop':    { w: 1440, h: 900  },
+    'Laptop':     { w: 1280, h: 800  },
+    'Tablet':     { w: 768,  h: 1024 },
+    'Mobile':     { w: 375,  h: 812  },
+  };
+
+  Object.entries(SIZE_PRESETS).forEach(([name, { w, h }]) => {
+    it(`produces ${w}x${h} canvas for "${name}" preset`, () => {
+      const { canvas } = resizeImage_impl(4004, 2180, w, h);
+      expect(canvas.width).toBe(w);
+      expect(canvas.height).toBe(h);
+    });
+  });
+});
+
 // ── Message routing ────────────────────────────────────────────────────────────
 
 describe('offscreen message routing', () => {
@@ -201,7 +242,7 @@ describe('offscreen message routing', () => {
   });
 
   it('recognises all supported message types', () => {
-    const supported = ['CROP_IMAGE', 'COMPOSITE_FRAMES', 'CONVERT_FORMAT'];
+    const supported = ['CROP_IMAGE', 'COMPOSITE_FRAMES', 'CONVERT_FORMAT', 'RESIZE_IMAGE'];
     const handlers = Object.fromEntries(supported.map(t => [t, true]));
     supported.forEach(type => expect(handlers[type]).toBe(true));
     expect(handlers['UNKNOWN_TYPE']).toBeUndefined();

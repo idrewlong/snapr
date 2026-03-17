@@ -513,6 +513,8 @@ If the file already exists in the download location, Chrome's download API appen
 | `downloads` | Required | Save files to disk                         | Install                    |
 | `storage`   | Required | Persist settings                           | Install                    |
 | `offscreen` | Required | Canvas operations for compositing/cropping | Install                    |
+| `scripting` | Required | Inject content scripts on demand for full-page and element capture | Install |
+| `windows`   | Required | Reopen popup as confirmation window after element capture | Install |
 | `debugger`  | Optional | Viewport emulation without window resize   | First use of a size preset |
 
 **What Snapr cannot do:** read browsing history, access other tabs, run in the background, make network requests, read page content (except when user triggers full-page or element capture via explicit action on the active tab).
@@ -841,7 +843,7 @@ For tracking progress during development:
 - [x] Keyboard shortcut (quick capture)
 - [x] Error handling for all edge cases
 - [x] Build out Testing Suite to make sure everything works
-- [ ] Icon design (all sizes)
+- [x] Icon design (all sizes)
 - [ ] Web Store listing copy and screenshots
 - [x] README and GitHub repo polish
 - [ ] CI pipeline
