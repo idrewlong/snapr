@@ -286,11 +286,11 @@ function enterElementConfirmMode(pending) {
   img.style.background = 'var(--bg-secondary)';
   document.getElementById('skeleton').classList.add('hidden');
 
-  // Mark Element as active mode (lock other modes during confirm)
-  state.mode = 'element';
+  // Mark Selected Area as active mode (lock other modes during confirm)
+  state.mode = 'region';
   document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === 'element');
-    if (btn.dataset.mode !== 'element') btn.disabled = true;
+    btn.classList.toggle('active', btn.dataset.mode === 'region');
+    if (btn.dataset.mode !== 'region') btn.disabled = true;
   });
 
   // Show a confirm banner below the thumbnail
@@ -298,10 +298,9 @@ function enterElementConfirmMode(pending) {
   banner.id = 'confirmBanner';
   banner.innerHTML = `
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <rect x="1" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/>
-      <rect x="6" y="5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+      <rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2.5 1.5"/>
     </svg>
-    Element selected — adjust settings and capture
+    Area selected — adjust settings and capture
     <button id="discardBtn">✕ discard</button>`;
 
   const body = document.querySelector('.body');
@@ -325,13 +324,13 @@ async function discardPendingCapture() {
 // ── Mode ──────────────────────────────────────────────────────────────────────
 
 async function setMode(mode, persist = true) {
-  if (mode === 'element') {
+  if (mode === 'region') {
     if (isExtension) {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
         // Pre-capture the viewport NOW while we have user-gesture / activeTab context.
-        // The service worker receives ELEMENT_SELECTED in a message handler, which
+        // The service worker receives REGION_SELECTED in a message handler, which
         // does NOT carry the user gesture needed for captureVisibleTab in MV3.
         try {
           const screenshotDataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
@@ -342,15 +341,14 @@ async function setMode(mode, persist = true) {
 
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          files:  ['src/content/element-picker.js'],
+          files:  ['src/content/region-picker.js'],
         });
-        showToast('Click any element on the page to capture it. Esc to cancel.', 'info');
-        setTimeout(() => window.close(), 800);
+        window.close();
       } catch (err) {
         showToast("Can't inject picker on this page.", 'error');
       }
     } else {
-      showToast('Element mode: closes popup, activates picker on page.', 'info');
+      showToast('Selected Area mode: closes popup, drag to select a region.', 'info');
     }
     return;
   }
@@ -556,7 +554,10 @@ async function captureFullPage() {
   const [{ result: dims }] = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: () => ({
-      scrollHeight:      document.body.scrollHeight,
+      // Use Math.max to handle pages where <html> (not <body>) is the scroller.
+      // On those pages document.body.scrollHeight equals window.innerHeight,
+      // making totalHeight = 0 and producing a degenerate "data:," canvas URL.
+      scrollHeight:      Math.max(document.body.scrollHeight, document.documentElement.scrollHeight),
       viewportHeight:    window.innerHeight,
       viewportWidth:     window.innerWidth,
       devicePixelRatio:  window.devicePixelRatio,
@@ -628,30 +629,36 @@ async function captureFullPage() {
 }
 
 async function compositeFrames(frames, cssWidth, cssHeight, dpr = 1) {
-  // Canvas is in physical pixels so retina captures aren't compressed.
-  const physW = Math.round(cssWidth  * dpr);
-  const physH = Math.round(cssHeight * dpr);
+  // Canvas is in CSS pixels. Using device pixels (cssWidth * dpr) for the canvas
+  // size risks exceeding the GPU's maximum texture dimension (~16 384 px), which
+  // causes toDataURL() to silently return "data:," on long pages / retina displays.
+  // captureVisibleTab frames are still drawn from their full device-pixel source,
+  // so image quality is preserved — only the output canvas is at CSS-pixel scale.
+  const canvasW = Math.round(cssWidth);
+  const canvasH = Math.round(cssHeight);
 
   const canvas = document.createElement('canvas');
-  canvas.width  = physW;
-  canvas.height = physH;
+  canvas.width  = canvasW;
+  canvas.height = canvasH;
   const ctx = canvas.getContext('2d');
 
   for (const frame of frames) {
     await new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const destY = Math.round(frame.offsetY * dpr);
-        // Clamp last frame so it doesn't overdraw the canvas bottom edge.
-        const destH = Math.min(img.naturalHeight, physH - destY);
+        // destY and destH in CSS pixels; source rows in device pixels (×dpr).
+        const destY  = Math.round(frame.offsetY);
+        const destH  = Math.min(Math.round(img.naturalHeight / dpr), canvasH - destY);
+        const srcH   = Math.round(destH * dpr); // device-pixel rows to copy
         if (destH > 0) {
           ctx.drawImage(img,
-            0, 0, img.naturalWidth, destH,   // source  (physical px)
-            0, destY, physW, destH            // dest    (physical px)
+            0, 0, img.naturalWidth, srcH,  // source: full width, srcH device rows
+            0, destY, canvasW, destH       // dest:   CSS-pixel coordinates
           );
         }
         resolve();
       };
+      img.onerror = () => resolve(); // skip broken frames rather than hanging
       img.src = frame.dataUrl;
     });
   }
@@ -664,7 +671,9 @@ async function compositeFrames(frames, cssWidth, cssHeight, dpr = 1) {
 
 function dataUrlToBlobUrl(dataUrl) {
   const [header, data] = dataUrl.split(',');
-  const mime  = header.match(/:(.*?);/)[1];
+  const mimeMatch = header?.match(/:(.*?);/);
+  if (!mimeMatch) throw new Error('Full-page capture produced an invalid image. The page may have no scrollable content.');
+  const mime = mimeMatch[1];
   const bytes = atob(data);
   const arr   = new Uint8Array(bytes.length);
   for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);

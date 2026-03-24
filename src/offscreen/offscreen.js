@@ -12,7 +12,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   const handlers = {
     CROP_IMAGE:        () => cropImage(message.dataUrl, message.rect, message.outputFormat, message.quality),
-    COMPOSITE_FRAMES:  () => compositeFrames(message.frames, message.dimensions, message.format, message.quality),
+    COMPOSITE_FRAMES:  () => compositeFrames(message.frames, message.dimensions, message.format, message.quality, message.reference, message.fixedBarHeight, message.dpr),
     CONVERT_FORMAT:    () => convertFormat(message.dataUrl, message.format, message.quality),
     RESIZE_IMAGE:      () => resizeImage(message.dataUrl, message.width, message.height, message.format, message.quality),
   };
@@ -48,17 +48,50 @@ async function cropImage(dataUrl, rect, format, quality) {
 
 // ── Composite (full-page frames) ──────────────────────────────────────────────
 
-async function compositeFrames(frames, dimensions, format, quality) {
+/**
+ * Stitch scroll tiles into one image, then overlay the fixed header once.
+ *
+ * DPR handling: captureVisibleTab returns images at device pixel density.
+ * All CSS-pixel measurements (offsetY, height, fixedBarHeight) must be
+ * multiplied by dpr before use as bitmap coordinates or canvas dimensions.
+ *
+ * @param {Array<{dataUrl, offsetY, height}>} frames  - CSS-pixel positions/sizes
+ * @param {{width, height}} dimensions                - CSS-pixel canvas size
+ * @param {string}  format
+ * @param {number}  quality
+ * @param {string|null} reference    - screenshot taken before headers were hidden
+ * @param {number}  fixedBarHeight   - CSS pixels of header to overlay from reference
+ * @param {number}  dpr              - window.devicePixelRatio of the captured tab
+ */
+async function compositeFrames(frames, dimensions, format, quality, reference, fixedBarHeight, dpr) {
   if (!frames || frames.length === 0) {
     throw new Error('compositeFrames: no frames provided.');
   }
-  const canvas = new OffscreenCanvas(dimensions.width, dimensions.height);
+
+  dpr = dpr || 1;
+
+  // Canvas is sized in device pixels for full-resolution output
+  const canvas = new OffscreenCanvas(dimensions.width * dpr, dimensions.height * dpr);
   const ctx    = canvas.getContext('2d');
 
   for (const frame of frames) {
     const bitmap = await loadBitmap(frame.dataUrl);
-    ctx.drawImage(bitmap, 0, frame.offsetY);
+
+    // Crop: use only the rows that belong to this tile (fixes last-frame bleed).
+    // Source is in device pixels; destination Y is also in device pixels.
+    const srcH = Math.round(frame.height * dpr);
+    const dstY = Math.round(frame.offsetY * dpr);
+    ctx.drawImage(bitmap, 0, 0, bitmap.width, srcH, 0, dstY, bitmap.width, srcH);
     bitmap.close();
+  }
+
+  // Overlay the reference header once at the very top of the composite.
+  // This gives one clean header with no duplication across tiles.
+  if (reference && fixedBarHeight > 0) {
+    const refBitmap = await loadBitmap(reference);
+    const barH = Math.round(fixedBarHeight * dpr);
+    ctx.drawImage(refBitmap, 0, 0, refBitmap.width, barH, 0, 0, refBitmap.width, barH);
+    refBitmap.close();
   }
 
   return canvasToDataUrl(canvas, format, quality);

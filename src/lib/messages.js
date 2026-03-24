@@ -15,13 +15,16 @@
 export const CAPTURE_VIEWPORT = 'CAPTURE_VIEWPORT'; // { format, quality, sizePreset }
 export const CAPTURE_FULLPAGE = 'CAPTURE_FULLPAGE'; // { format, quality, maxHeight }
 export const CAPTURE_ELEMENT  = 'CAPTURE_ELEMENT';  // {} — initiates element picker
+export const CAPTURE_REGION   = 'CAPTURE_REGION';   // {} — initiates drag-to-select region picker
 
 // Content Script → Service Worker
 export const ELEMENT_SELECTED = 'ELEMENT_SELECTED'; // { rect: {x,y,width,height}, devicePixelRatio }
+export const REGION_SELECTED  = 'REGION_SELECTED';  // { rect: {x,y,width,height}, devicePixelRatio }
 export const SCROLL_INFO      = 'SCROLL_INFO';       // { scrollHeight, scrollWidth, viewportHeight, viewportWidth }
 
 // Service Worker → Content Script
 export const SCROLL_TO        = 'SCROLL_TO';         // { y }
+export const HIDE_FIXED       = 'HIDE_FIXED';        // {} → { fixedBarHeight }
 
 // Service Worker → Offscreen Document
 export const COMPOSITE_FRAMES = 'COMPOSITE_FRAMES';  // { frames: dataUrl[], dimensions }

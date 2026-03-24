@@ -51,7 +51,7 @@ export async function handleQuickCapture(tab) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'ELEMENT_SELECTED') {
+  if (message.type === 'ELEMENT_SELECTED' || message.type === 'REGION_SELECTED') {
     handleElementCapture(sender.tab, message.rect, message.devicePixelRatio)
       .then(() => sendResponse({ success: true }))
       .catch(err => sendResponse({ success: false, error: err.message }));

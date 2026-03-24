@@ -3,12 +3,15 @@
  *
  * Flow:
  *  1. Inject full-page.js content script into the active tab
- *  2. Get scroll dimensions from the content script
- *  3. Content script stores + hides fixed/sticky elements
- *  4. Scroll loop: captureVisibleTab → SCROLL_TO → repeat
- *  5. Content script restores fixed/sticky elements
- *  6. Send all frames to offscreen document for compositing
- *  7. Return composited data URL
+ *  2. Get scroll dimensions + DPR from the content script (page untouched)
+ *  3. Scroll to y=0 and take a reference screenshot (headers still visible)
+ *  4. Content script hides fixed/sticky elements; returns fixedBarHeight
+ *  5. Scroll loop: captureVisibleTab → SCROLL_TO → repeat
+ *  6. Content script restores fixed/sticky elements
+ *  7. Send all frames + reference to offscreen document for compositing
+ *  8. Offscreen stitches tiles (DPR-correct), then overlays the reference
+ *     header once at the top — giving one clean header, no repetition
+ *  9. Return composited data URL
  *
  * See snapr.md § "Full-page capture" for edge case mitigations.
  */
@@ -38,13 +41,27 @@ export async function capture(tabId, options) {
     throw err;
   }
 
-  // Get page dimensions and prepare fixed elements
-  const { scrollHeight, viewportHeight, viewportWidth } =
+  // Phase 1: get dimensions — content script does NOT modify the page yet
+  const { scrollHeight, viewportHeight, viewportWidth, devicePixelRatio } =
     await chrome.tabs.sendMessage(tabId, { type: MSG.SCROLL_INFO });
 
-  const maxHeight   = options.maxFullPageHeight || 15000;
-  const capped      = scrollHeight > maxHeight;
+  const dpr       = devicePixelRatio || 1;
+  const maxHeight = options.maxFullPageHeight || 15000;
+  const capped    = scrollHeight > maxHeight;
   const totalHeight = Math.min(scrollHeight, maxHeight);
+
+  // Scroll to the top so the reference screenshot shows the real header
+  await chrome.tabs.sendMessage(tabId, { type: MSG.SCROLL_TO, y: 0 });
+  await delay(150);
+
+  // Phase 2: reference screenshot — headers still visible at y=0
+  const referenceDataUrl = await chrome.tabs.captureVisibleTab(null, {
+    format:  'jpeg',
+    quality: 92,
+  });
+
+  // Phase 3: hide fixed/sticky elements, get the header bar height
+  const { fixedBarHeight } = await chrome.tabs.sendMessage(tabId, { type: MSG.HIDE_FIXED });
 
   const frames = [];
   let offsetY  = 0;
@@ -72,19 +89,29 @@ export async function capture(tabId, options) {
   }
 
   // Composite frames in offscreen document
-  const dataUrl = await compositeFrames(frames, { width: viewportWidth, height: totalHeight }, options);
+  const dataUrl = await compositeFrames(
+    frames,
+    { width: viewportWidth, height: totalHeight },
+    options,
+    referenceDataUrl,
+    fixedBarHeight,
+    dpr,
+  );
   return { dataUrl, capped };
 }
 
-async function compositeFrames(frames, dimensions, options) {
+async function compositeFrames(frames, dimensions, options, reference, fixedBarHeight, dpr) {
   await ensureOffscreen();
   const result = await chrome.runtime.sendMessage({
-    type:    MSG.COMPOSITE_FRAMES,
+    type:           MSG.COMPOSITE_FRAMES,
     frames,
     dimensions,
-    format:  options.format,
-    quality: options.quality,
-    target:  'offscreen',
+    format:         options.format,
+    quality:        options.quality,
+    reference:      fixedBarHeight > 0 ? reference : null,
+    fixedBarHeight: fixedBarHeight || 0,
+    dpr:            dpr || 1,
+    target:         'offscreen',
   });
   if (result?.error) throw new Error(`Offscreen error: ${result.error}`);
   return result;
