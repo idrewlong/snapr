@@ -16,6 +16,7 @@
 
 import { buildFilename } from '../lib/filename.js';
 import { capture as captureViewport } from '../background/capture-viewport.js';
+import { imageToPdfDataUrl } from '../lib/pdf.js';
 
 // ── Environment detection ─────────────────────────────────────────────────────
 
@@ -403,7 +404,7 @@ function selectFormat(fmt, persist = true) {
     o.classList.toggle('selected', o.dataset.value === fmt);
   });
   document.getElementById('formatSelect').classList.remove('open');
-  document.getElementById('qualityInput').disabled = (fmt === 'PNG');
+  document.getElementById('qualityInput').disabled = (fmt === 'PNG' || fmt === 'PDF');
   updateFilename();
   if (persist) storage.set({ format: fmt });
 }
@@ -488,7 +489,10 @@ async function doCapture() {
               sizePreset: 'As-is',
             });
       _lastCaptureDataUrl = dataUrl;
-      const blobUrl  = dataUrlToBlobUrl(dataUrl);
+      const finalDataUrl = state.format === 'PDF'
+        ? await imageToPdfDataUrl(dataUrl, state.quality)
+        : dataUrl;
+      const blobUrl  = dataUrlToBlobUrl(finalDataUrl);
 
       await chrome.downloads.download({ url: blobUrl, filename, saveAs: true });
       setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
@@ -529,7 +533,7 @@ async function doCapture() {
 
 // Re-encode the stored PNG to the user's chosen format/quality
 async function convertPending(dataUrl) {
-  if (state.format === 'PNG') return dataUrl;
+  if (state.format === 'PNG' || state.format === 'PDF') return dataUrl;
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -663,7 +667,7 @@ async function compositeFrames(frames, cssWidth, cssHeight, dpr = 1) {
     });
   }
 
-  const mime = state.format === 'PNG' ? 'image/png'
+  const mime = (state.format === 'PNG' || state.format === 'PDF') ? 'image/png'
              : state.format === 'WebP' ? 'image/webp'
              : 'image/jpeg';
   return canvas.toDataURL(mime, state.quality / 100);

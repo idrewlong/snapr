@@ -14,7 +14,7 @@ export const SIZE_PRESETS = {
   'Mobile':     { w: 375,  h: 812  },
 };
 
-export const FORMATS = ['PNG', 'JPG', 'WebP'];
+export const FORMATS = ['PNG', 'JPG', 'WebP', 'PDF'];
 
 export const DEFAULT_SETTINGS = {
   format:           'PNG',
